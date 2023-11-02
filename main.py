@@ -1,12 +1,7 @@
 import paho.mqtt.client as mqtt
 import mido
 
-
-#mido.set_backend('mido.backends.rtmidi/UNIX_JACK')
-mido.set_backend('mido.backends.rtmidi/LINUX_ALSA')
-#mido.set_backend('UNIX_JACK')
 outport = mido.open_output()
-
 
 mapping = [(('EC:DA:3B:AA:BF:2C', 1), 60),
            (('EC:DA:3B:AA:C1:60', 1), 61)]
@@ -28,15 +23,15 @@ def on_message(client, userdata, msg):
     print(msg.topic+" "+str(msg.payload))
     if msg.topic[:7] == 'device/':
         for ((mac, button_id), note) in mapping:
-            print (mac, button_id, note)
+            #print (mac, button_id, note)
             if msg.topic[7:7+6*2+5] == mac:
                 midi_msg = mido.Message('note_on', note=note, velocity=127)
                 #cc = mido.control_change(channel=1, control=1, value=122, time=60)
-                cc = mido.Message.from_str('control_change channel=0 control=0 value=122')
+                #cc = mido.Message.from_str('control_change channel=0 control=0 value=122')
                 outport.send(midi_msg)
-                outport.send(cc)
-                print("sent")
-                #midi_msg = mido.Message('note_off', note=note, velocity=127)
+                #outport.send(cc)
+                #print("sent")
+                midi_msg = mido.Message('note_off', note=note, velocity=127)
                 outport.send(midi_msg)
 
 client = mqtt.Client()
