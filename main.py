@@ -1,47 +1,53 @@
-import paho.mqtt.client as mqtt
 import mido
+import socket
 
 outport = mido.open_output()
 
 mapping = [(('EC:DA:3B:AA:BF:2C', 1), 60),
            (('EC:DA:3B:AA:C1:60', 1), 61)]
-# The callback for when the client receives a CONNACK response from the server.
-def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
 
-    # Subscribing in on_connect() means that if we lose the connection and
-    # reconnect then subscriptions will be renewed.
-    #client.subscribe("$SYS/#")
-    #client.subscribe("topic/#")
-    #client.subscribe("test/#")
-    #client.subscribe("test/1")
-    client.subscribe("#")
-
+NPP_PORT = 6566
 
 # The callback for when a PUBLISH message is received from the server.
-def on_message(client, userdata, msg):
-    print(msg.topic+" "+str(msg.payload))
-    if msg.topic[:7] == 'device/':
-        for ((mac, button_id), note) in mapping:
-            #print (mac, button_id, note)
-            if msg.topic[7:7+6*2+5] == mac:
-                midi_msg = mido.Message('note_on', note=note, velocity=127)
-                #cc = mido.control_change(channel=1, control=1, value=122, time=60)
-                #cc = mido.Message.from_str('control_change channel=0 control=0 value=122')
-                outport.send(midi_msg)
-                #outport.send(cc)
-                #print("sent")
-                midi_msg = mido.Message('note_off', note=note, velocity=127)
-                outport.send(midi_msg)
+def handle_button(recv_mac):
+    for ((mac, button_id), note) in mapping:
+        #print (mac, button_id, note)
+        if recv_mac == mac:
+            midi_msg = mido.Message('note_on', note=note, velocity=127)
+            #cc = mido.control_change(channel=1, control=1, value=122, time=60)
+            #cc = mido.Message.from_str('control_change channel=0 control=0 value=122')
+            outport.send(midi_msg)
+            #outport.send(cc)
+            #print("sent")
+            midi_msg = mido.Message('note_off', note=note, velocity=127)
+            outport.send(midi_msg)
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
 
-client.connect("localhost", 1883, 60)
+def main():
 
-# Blocking call that processes network traffic, dispatches callbacks and
-# handles reconnecting.
-# Other loop*() functions are available that give a threaded interface and a
-# manual interface.
-client.loop_forever()
+    sock = socket.socket(socket.AF_INET, # Internet
+                         socket.SOCK_DGRAM) # UDP
+
+    sock.bind(('', NPP_PORT))
+
+    while True:
+        data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
+        #print(f"received message: {data}")
+
+        msg_type = data[0:1]
+        mac = data[1:18]
+        rest = data[18:]
+        #print(f"msg type: {msg_type}")
+        if msg_type == b'D': # Discovery
+            print(f'Discovery received from MAC {mac}')
+            sock.sendto(b'R', addr)
+        elif msg_type == b'B':
+            print(f'Button #{rest.decode("ascii")} received from MAC {mac}')
+            handle_button(mac)
+        elif msg_type == b'V':
+            print(f'Voltage {rest.decode("ascii")} mV received from MAC {mac}')
+        else:
+            print(f'Unknown cmd {msg_type}')
+
+if __name__ == '__main__':
+    main()
