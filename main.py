@@ -1,10 +1,26 @@
 import mido
+import platform
 import socket
+import sys
 
-outport = mido.open_output()
 
-mapping = [(('EC:DA:3B:AA:BF:2C', 1), 60),
-           (('EC:DA:3B:AA:C1:60', 1), 61)]
+
+try:
+    from config import mapping
+except:
+    print("Could not load config.py, please copy config.py.example into config.py and edit it to your needs")
+    sys.exit(1)
+
+outport = None
+
+if platform.system() == 'Darwin':
+    outport = mido.open_output('IAC Driver Bus 1')
+elif platform.system() == 'Linux':
+    outport = mido.open_output()
+else:
+    print("Unknown / unsupported system")
+    sys.exit(1)
+
 
 NPP_PORT = 6566
 
