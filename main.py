@@ -29,6 +29,7 @@ def handle_button(recv_mac):
     for ((mac, button_id), note) in mapping:
         #print (mac, button_id, note)
         if recv_mac == mac:
+            print("sending midi")
             midi_msg = mido.Message('note_on', note=note, velocity=127)
             #cc = mido.control_change(channel=1, control=1, value=122, time=60)
             #cc = mido.Message.from_str('control_change channel=0 control=0 value=122')
@@ -47,6 +48,8 @@ def main():
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     sock.bind(('', NPP_PORT))
+
+    print("Running")
 
     while True:
         data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
