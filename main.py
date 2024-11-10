@@ -13,13 +13,31 @@ except:
 
 outport = None
 
-if platform.system() == 'Darwin':
-    outport = mido.open_output('IAC Driver Bus 1')
-elif platform.system() == 'Linux':
-    outport = mido.open_output()
-else:
-    print("Unknown / unsupported system")
+ports = mido.get_output_names()
+
+print("Select output port:")
+
+for i, p in enumerate(ports):
+    print(f"{i} : {p}")
+
+print("-1 - virtual output (does not work on Windows)")
+
+try:
+    port_selection = int(input())
+except:
+    print("invalid selection, needs to be integer")
     sys.exit(1)
+
+if port_selection == -1:
+    if platform.system() == 'Darwin':
+        outport = mido.open_output('IAC Driver Bus 1')
+    elif platform.system() == 'Linux':
+        outport = mido.open_output()
+    else:
+        print("Unknown / unsupported system")
+        sys.exit(1)
+else:
+    outport = mido.open_output(ports[port_selection])
 
 
 NPP_PORT = 6566
